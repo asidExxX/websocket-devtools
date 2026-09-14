@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { forwardRef, useState, useEffect, useImperativeHandle } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { filterMessages } from "../utils/filterUtils";
+import { createAiMessageView } from "../utils/aiAssistant.js";
 import JsonViewer from "./JsonViewer";
 import useNewMessageHighlight from "../hooks/useNewMessageHighlight";
 import { addFromMessageList } from "../utils/globalFavorites";
-import { Ban, Search, Settings, CircleX } from "lucide-react";
+import { Ban, Search, Settings, CircleX, Sparkles } from "lucide-react";
 import { t } from "../utils/i18n.js";
 import CheeseIcon from "../Icons/cheese.jsx";
 import ProtobufIcon from "../Icons/Protobuf.jsx";
@@ -61,14 +62,15 @@ const Icons = {
   ),
 };
 
-const MessageDetails = ({
+const MessageDetails = forwardRef(({
   connection,
   selectedConnectionId,
   isIntercepting,
   onSimulateMessage,
   onClearMessages,
   onOpenSimulatePanel,
-}) => {
+  onAnalyzeMessage,
+}, ref) => {
   const [filterDirection, setFilterDirection] = useState("all"); // 'all' | 'outgoing' | 'incoming'
   const [filterText, setFilterText] = useState(""); // Message content filter
   const [filterInvert, setFilterInvert] = useState(false); // Invert filter
@@ -76,6 +78,14 @@ const MessageDetails = ({
   const [copiedMessageKey, setCopiedMessageKey] = useState(null); // Copied message key
   const [sortOrder, setSortOrder] = useState("desc"); // 'asc' | 'desc' time sorting
   const [hoveredMessageKey, setHoveredMessageKey] = useState(null); // Hovered message key
+
+  useImperativeHandle(ref, () => ({
+    getAiMessageView: () => createAiMessageView(connection, {
+        direction: filterDirection,
+        text: filterText,
+        invert: filterInvert,
+      }, sortOrder),
+  }), [connection, filterDirection, filterText, filterInvert, sortOrder]);
 
   
   // Use new message highlight hook
@@ -423,6 +433,7 @@ const MessageDetails = ({
                   value={filterText}
                   onChange={(e) => setFilterText(e.target.value)}
                   placeholder={t("messageDetails.controls.filterPlaceholder")}
+                  title={t("messageDetails.controls.filterPlaceholder")}
                 />
                 {filterText && (
                   <button className="clear-filter-btn" onClick={handleClearSearchFilter}>
@@ -436,6 +447,15 @@ const MessageDetails = ({
               <span className="checkmark"></span>
               <span className="checkbox-label">{t("messageDetails.controls.invert")}</span>
             </label>
+            {getSelectedMessage()?.type === "message" && (
+              <button
+                type="button"
+                className="ai-analyze-message-button"
+                onClick={() => onAnalyzeMessage?.(getSelectedMessage())}
+              >
+                <Sparkles size={14} /> {t("ai.analyzeSelected")}
+              </button>
+            )}
             <button
               className="clear-messages-btn"
               onClick={handleClearMessagesList}
@@ -575,6 +595,6 @@ const MessageDetails = ({
       </div>
     </div>
   );
-};
+});
 
 export default MessageDetails;

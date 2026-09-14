@@ -1,7 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Switch, Group, Stack, Text, Card, Box, Tooltip } from "@mantine/core";
 import { Activity, Shield, Info } from "lucide-react";
 import { t } from "../utils/i18n";
+
+const TRAFFIC_RATE_LIMIT_KEY = "websocket-proxy-traffic-rate-limit";
+const DEFAULT_TRAFFIC_RATE_LIMIT = 800;
+const MAX_TRAFFIC_RATE_LIMIT = 1000000;
 
 const ControlPanel = ({
   isMonitoring,
@@ -12,6 +16,53 @@ const ControlPanel = ({
 }) => {
   const [blockOutgoing, setBlockOutgoing] = useState(false);
   const [blockIncoming, setBlockIncoming] = useState(false);
+  const [trafficRateLimit, setTrafficRateLimit] = useState(DEFAULT_TRAFFIC_RATE_LIMIT);
+  const [trafficRateLimitDraft, setTrafficRateLimitDraft] = useState(String(DEFAULT_TRAFFIC_RATE_LIMIT));
+  const [trafficRateLimitError, setTrafficRateLimitError] = useState(false);
+
+  useEffect(() => {
+    let receivedStorageChange = false;
+    const updateLimit = (value) => {
+      const limit = Number.isSafeInteger(value) && value >= 0 && value <= MAX_TRAFFIC_RATE_LIMIT
+        ? value : DEFAULT_TRAFFIC_RATE_LIMIT;
+      setTrafficRateLimit(limit);
+      setTrafficRateLimitDraft(String(limit));
+      setTrafficRateLimitError(false);
+    };
+    const onStorageChanged = (changes, areaName) => {
+      if (areaName === "local" && changes[TRAFFIC_RATE_LIMIT_KEY]) {
+        receivedStorageChange = true;
+        updateLimit(changes[TRAFFIC_RATE_LIMIT_KEY].newValue);
+      }
+    };
+    chrome.storage.onChanged.addListener(onStorageChanged);
+    chrome.storage.local.get([TRAFFIC_RATE_LIMIT_KEY], (result) => {
+      if (!receivedStorageChange) updateLimit(result[TRAFFIC_RATE_LIMIT_KEY]);
+    });
+    return () => chrome.storage.onChanged.removeListener(onStorageChanged);
+  }, []);
+
+  const saveTrafficRateLimit = () => {
+    const value = trafficRateLimitDraft.trim();
+    const limit = Number(value);
+    if (!/^\d+$/.test(value) || !Number.isSafeInteger(limit) || limit > MAX_TRAFFIC_RATE_LIMIT) {
+      setTrafficRateLimitError(true);
+      return;
+    }
+    setTrafficRateLimitError(false);
+    if (limit === trafficRateLimit) {
+      setTrafficRateLimitDraft(String(limit));
+      return;
+    }
+    chrome.storage.local.set({ [TRAFFIC_RATE_LIMIT_KEY]: limit }, () => {
+      if (chrome.runtime.lastError) {
+        setTrafficRateLimitError(true);
+      } else {
+        setTrafficRateLimit(limit);
+        setTrafficRateLimitDraft(String(limit));
+      }
+    });
+  };
 
   const handleMonitoringToggle = () => {
     if (isMonitoring) {
@@ -22,7 +73,7 @@ const ControlPanel = ({
   };
 
   return (
-    <div style={{ height: "100%", overflow: "hidden", padding: "16px" }}>
+    <div style={{ height: "100%", overflowY: "auto", overflowX: "hidden", padding: "16px", boxSizing: "border-box" }}>
       <Stack gap="sm">
         {/* Monitor Card */}
         <Card
@@ -90,6 +141,48 @@ const ControlPanel = ({
                   : t("panel.controlPanel.status.inactive")}
               </Text>
             </Group>
+            <Group justify="space-between" align="center" gap="4px">
+              <Text size="xs" c="rgb(209, 213, 219)">
+                {t("panel.controlPanel.trafficRateLimit")}
+              </Text>
+              <input
+                type="number"
+                min="0"
+                max={MAX_TRAFFIC_RATE_LIMIT}
+                step="1"
+                value={trafficRateLimitDraft}
+                onChange={(event) => {
+                  setTrafficRateLimitDraft(event.currentTarget.value);
+                  setTrafficRateLimitError(false);
+                }}
+                onBlur={saveTrafficRateLimit}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.currentTarget.blur();
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setTrafficRateLimitDraft(String(trafficRateLimit));
+                    setTrafficRateLimitError(false);
+                  }
+                }}
+                aria-label={t("panel.controlPanel.trafficRateLimit")}
+                aria-invalid={trafficRateLimitError}
+                style={{
+                  width: "78px",
+                  height: "22px",
+                  padding: "0 4px",
+                  border: `1px solid ${trafficRateLimitError ? "#ef4444" : "#555"}`,
+                  borderRadius: "4px",
+                  background: "#2b2d31",
+                  color: "#e5e7eb",
+                  fontSize: "11px",
+                }}
+              />
+            </Group>
+            <Text size="xs" c={trafficRateLimitError ? "red" : "dimmed"}>
+              {t(trafficRateLimitError
+                ? "panel.controlPanel.trafficRateLimitError"
+                : "panel.controlPanel.trafficRateLimitHint")}
+            </Text>
           </Stack>
         </Card>
         {/* Message Control Card */}

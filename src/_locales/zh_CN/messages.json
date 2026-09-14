@@ -211,6 +211,18 @@
     "message": "监控",
     "description": "Translation for panel.controlPanel.monitor"
   },
+  "panel_controlPanel_trafficRateLimit": {
+    "message": "速率上限（条/秒）",
+    "description": "Translation for panel.controlPanel.trafficRateLimit"
+  },
+  "panel_controlPanel_trafficRateLimitHint": {
+    "message": "0 表示不因高流量停止监控",
+    "description": "Translation for panel.controlPanel.trafficRateLimitHint"
+  },
+  "panel_controlPanel_trafficRateLimitError": {
+    "message": "请输入 0 到 1000000 的整数",
+    "description": "Translation for panel.controlPanel.trafficRateLimitError"
+  },
   "panel_controlPanel_messageControl": {
     "message": "流量控制",
     "description": "Translation for panel.controlPanel.messageControl"
@@ -788,7 +800,7 @@
     "description": "Translation for messageDetails.controls.invert"
   },
   "messageDetails_controls_filterPlaceholder": {
-    "message": "按文本内容筛选消息",
+    "message": "筛选消息，多个词用逗号分隔",
     "description": "Translation for messageDetails.controls.filterPlaceholder"
   },
   "messageDetails_controls_clearMessages": {
@@ -1054,6 +1066,194 @@
   "panel_circuitBreaker_description": {
     "message": "由于高流量 ({{rate}} 消息/秒)，监控已停止。点击 Monitor 按钮恢复。",
     "description": "Translation for panel.circuitBreaker.description"
+  },
+  "ai_title": {
+    "message": "AI 助手",
+    "description": "Translation for ai.title"
+  },
+  "ai_open": {
+    "message": "AI 助手",
+    "description": "Translation for ai.open"
+  },
+  "ai_analyzeSelected": {
+    "message": "分析这条消息",
+    "description": "Translation for ai.analyzeSelected"
+  },
+  "ai_settings": {
+    "message": "AI 设置",
+    "description": "Translation for ai.settings"
+  },
+  "ai_compatibilityHint": {
+    "message": "支持兼容 OpenAI Chat Completions 的接口。请求地址为 Base URL + /chat/completions；按需读取需要模型支持函数调用。",
+    "description": "Translation for ai.compatibilityHint"
+  },
+  "ai_baseUrl": {
+    "message": "Base URL",
+    "description": "Translation for ai.baseUrl"
+  },
+  "ai_apiKey": {
+    "message": "API Key",
+    "description": "Translation for ai.apiKey"
+  },
+  "ai_apiKeyPlaceholder": {
+    "message": "本地模型可留空",
+    "description": "Translation for ai.apiKeyPlaceholder"
+  },
+  "ai_modelId": {
+    "message": "Model ID",
+    "description": "Translation for ai.modelId"
+  },
+  "ai_modelIdPlaceholder": {
+    "message": "输入模型 ID",
+    "description": "Translation for ai.modelIdPlaceholder"
+  },
+  "ai_maxToolCalls": {
+    "message": "单轮最多读取次数",
+    "description": "Translation for ai.maxToolCalls"
+  },
+  "ai_maxToolCallsHint": {
+    "message": "默认 24；填 0 不限制读取次数。重复请求、内容过大或超过 120 秒时仍会结束读取。",
+    "description": "Translation for ai.maxToolCallsHint"
+  },
+  "ai_keyStorageHint": {
+    "message": "配置保存在扩展本地。提问时会向指定接口发送可见消息上下文；AI 可按需读取其他连接、被过滤消息，以及当前页面和 DevTools 网络记录。",
+    "description": "Translation for ai.keyStorageHint"
+  },
+  "ai_httpWarning": {
+    "message": "HTTP 会以未加密方式传输 API Key，请尽量使用 HTTPS。",
+    "description": "Translation for ai.httpWarning"
+  },
+  "ai_intro": {
+    "message": "可以询问当前可见的 WebSocket 消息。AI 也能按需读取其他连接、被过滤消息、页面代码和 DevTools 网络请求。",
+    "description": "Translation for ai.intro"
+  },
+  "ai_you": {
+    "message": "你",
+    "description": "Translation for ai.you"
+  },
+  "ai_analyzing": {
+    "message": "分析中...",
+    "description": "Translation for ai.analyzing"
+  },
+  "ai_autoContextHint": {
+    "message": "自动提供当前可见消息；AI 可按需读取其他连接、被过滤消息、页面与 DevTools 网络记录。",
+    "description": "Translation for ai.autoContextHint"
+  },
+  "ai_toolsUsed": {
+    "message": "AI 已读取",
+    "description": "Translation for ai.toolsUsed"
+  },
+  "ai_tool_visible": {
+    "message": "更多可见消息",
+    "description": "Translation for ai.tool.visible"
+  },
+  "ai_tool_filtered": {
+    "message": "被过滤的消息",
+    "description": "Translation for ai.tool.filtered"
+  },
+  "ai_tool_connections": {
+    "message": "WebSocket 连接列表",
+    "description": "Translation for ai.tool.connections"
+  },
+  "ai_tool_connectionMessages": {
+    "message": "其他连接的消息",
+    "description": "Translation for ai.tool.connectionMessages"
+  },
+  "ai_tool_pageCode": {
+    "message": "页面 HTML",
+    "description": "Translation for ai.tool.pageCode"
+  },
+  "ai_tool_pageText": {
+    "message": "页面文本",
+    "description": "Translation for ai.tool.pageText"
+  },
+  "ai_tool_resources": {
+    "message": "页面加载的资源",
+    "description": "Translation for ai.tool.resources"
+  },
+  "ai_tool_network": {
+    "message": "DevTools 网络请求",
+    "description": "Translation for ai.tool.network"
+  },
+  "ai_selectedMessageIncluded": {
+    "message": "还会附带当前选中的消息。",
+    "description": "Translation for ai.selectedMessageIncluded"
+  },
+  "ai_noConnection": {
+    "message": "尚未选中 WebSocket 连接，也可以只分析当前页面。",
+    "description": "Translation for ai.noConnection"
+  },
+  "ai_questionPlaceholder": {
+    "message": "输入问题；留空则进行常规分析...",
+    "description": "Translation for ai.questionPlaceholder"
+  },
+  "ai_defaultQuestion": {
+    "message": "请结合 WebSocket 消息和页面内容，分析消息流、可能的用途以及异常之处。",
+    "description": "Translation for ai.defaultQuestion"
+  },
+  "ai_send": {
+    "message": "发送给 AI",
+    "description": "Translation for ai.send"
+  },
+  "ai_sendHint": {
+    "message": "Enter 发送，Shift+Enter 换行。",
+    "description": "Translation for ai.sendHint"
+  },
+  "ai_errors_invalidBaseUrl": {
+    "message": "请输入有效的 HTTP(S) Base URL，不要包含查询参数或片段。",
+    "description": "Translation for ai.errors.invalidBaseUrl"
+  },
+  "ai_errors_missingModelId": {
+    "message": "请输入 Model ID。",
+    "description": "Translation for ai.errors.missingModelId"
+  },
+  "ai_errors_invalidToolLimit": {
+    "message": "读取次数请输入 0 或正整数。",
+    "description": "Translation for ai.errors.invalidToolLimit"
+  },
+  "ai_errors_invalidResponse": {
+    "message": "接口返回了无效的 JSON。",
+    "description": "Translation for ai.errors.invalidResponse"
+  },
+  "ai_errors_emptyResponse": {
+    "message": "接口没有返回文本内容。",
+    "description": "Translation for ai.errors.emptyResponse"
+  },
+  "ai_errors_pageUnavailable": {
+    "message": "无法读取当前页面；请取消勾选页面内容，或检查当前页面是否受支持。",
+    "description": "Translation for ai.errors.pageUnavailable"
+  },
+  "ai_errors_networkUnavailable": {
+    "message": "无法读取 DevTools 网络记录。",
+    "description": "Translation for ai.errors.networkUnavailable"
+  },
+  "ai_errors_connectionUnavailable": {
+    "message": "找不到这个 WebSocket 连接。",
+    "description": "Translation for ai.errors.connectionUnavailable"
+  },
+  "ai_errors_requestTimeout": {
+    "message": "请求超过 120 秒，已超时。",
+    "description": "Translation for ai.errors.requestTimeout"
+  },
+  "ai_errors_toolsUnsupported": {
+    "message": "该模型或接口不支持函数调用，无法按需读取更多消息和页面代码。",
+    "description": "Translation for ai.errors.toolsUnsupported"
+  },
+  "ai_errors_invalidToolMarkup": {
+    "message": "模型返回的文本工具调用不完整，请重试或使用支持工具调用的接口。",
+    "description": "Translation for ai.errors.invalidToolMarkup"
+  },
+  "ai_errors_modelDidNotAnswer": {
+    "message": "模型持续请求工具，未能根据已读取内容生成分析。请重试或更换支持工具调用的模型。",
+    "description": "Translation for ai.errors.modelDidNotAnswer"
+  },
+  "ai_errors_requestFailed": {
+    "message": "AI 请求失败。",
+    "description": "Translation for ai.errors.requestFailed"
+  },
+  "ai_errors_storageFailed": {
+    "message": "无法从扩展存储加载 AI 设置。",
+    "description": "Translation for ai.errors.storageFailed"
   },
   "extensionName": {
     "message": "WebSocket DevTools",

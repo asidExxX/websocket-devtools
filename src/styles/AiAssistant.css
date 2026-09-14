@@ -1,0 +1,123 @@
+.ai-open-button,
+.ai-analyze-message-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(167, 139, 250, 0.55);
+  border-radius: 6px;
+  background: rgba(124, 58, 237, 0.18);
+  color: #ddd0ff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.ai-open-button { padding: 5px 9px; font-size: 12px; }
+.ai-analyze-message-button { padding: 5px 9px; font-size: 12px; flex-shrink: 0; }
+.ai-open-button:hover,
+.ai-analyze-message-button:hover { background: rgba(124, 58, 237, 0.32); }
+
+.ai-sidebar {
+  flex: 0 0 clamp(300px, 34vw, 420px);
+  min-width: 300px;
+  min-height: 0;
+  height: 100%;
+  border-left: 1px solid var(--border);
+}
+
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  background: var(--bg-content);
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.ai-title,
+.ai-header-actions { display: flex; align-items: center; gap: 8px; }
+.ai-title { color: #ddd0ff; font-size: 14px; font-weight: 650; }
+.ai-header-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.ai-header-actions button:hover { color: white; background: var(--bg-tertiary); }
+
+.ai-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  overflow-y: auto;
+  max-height: 55vh;
+  flex-shrink: 0;
+}
+.ai-settings label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+.ai-settings input,
+.ai-compose textarea {
+  width: 100%;
+  padding: 7px 9px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font: inherit;
+  outline: none;
+}
+.ai-settings input:focus,
+.ai-compose textarea:focus { border-color: #a78bfa; }
+.ai-hint { color: var(--text-muted); font-size: 11px; line-height: 1.4; }
+.ai-error { color: #fca5a5; font-size: 12px; overflow-wrap: anywhere; }
+.ai-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 5px;
+  color: white;
+  background: #6d28d9;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ai-primary:hover { background: #7c3aed; }
+.ai-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ai-conversation { flex: 1; min-height: 0; overflow-y: auto; padding: 14px; }
+.ai-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 130px; color: var(--text-secondary); text-align: center; font-size: 12px; }
+.ai-empty svg { color: #a78bfa; }
+.ai-turn { margin-bottom: 15px; max-width: 92%; }
+.ai-turn.user { margin-left: auto; }
+.ai-turn-label { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 11px; }
+.ai-turn.user .ai-turn-label { text-align: right; }
+.ai-turn-content { padding: 9px 11px; border-radius: 8px; background: var(--bg-card); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.55; user-select: text; }
+.ai-turn.user .ai-turn-content { background: #3b2a62; }
+.ai-loading { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; }
+.ai-loading svg { animation: ai-spin 1s linear infinite; }
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+
+.ai-compose { display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; padding: 11px 14px; border-top: 1px solid var(--border); }
+.ai-context-note { color: #c4b5fd; font-size: 11px; }
+.ai-compose-row { display: flex; align-items: flex-end; gap: 7px; }
+.ai-compose textarea { flex: 1; resize: vertical; min-height: 52px; max-height: 140px; font-size: 12px; }
+.ai-send { height: 36px; min-width: 36px; padding: 0; }

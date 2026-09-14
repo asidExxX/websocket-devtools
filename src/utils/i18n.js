@@ -127,11 +127,14 @@ class I18n {
     try {
       // Check if there's a manually set language preference
       const savedLanguage = await this.getSavedLanguage();
+      const supportedSavedLanguage = this.supportedLanguages.includes(savedLanguage)
+        ? savedLanguage
+        : /^zh(?:[-_]|$)/i.test(savedLanguage || '') ? 'zh-cn' : null;
       
-      if (savedLanguage) {
+      if (supportedSavedLanguage) {
         // Has manual setting, use custom system
         this.useChromeAPI = false;
-        this.currentLanguage = savedLanguage;
+        this.currentLanguage = supportedSavedLanguage;
       } else if (this.chromeSupported) {
         // No manual setting and Chrome API supported, prioritize Chrome API
         this.useChromeAPI = true;
@@ -154,13 +157,7 @@ class I18n {
    * Map Chrome locale to flat format
    */
   mapChromeLocaleToFlat(chromeLocale) {
-    const mapping = {
-      'en': 'en-us',
-      'en-US': 'en-us', 
-      'zh-CN': 'zh-cn',
-      'zh': 'zh-cn'
-    };
-    return mapping[chromeLocale] || this.fallbackLanguage;
+    return /^zh(?:[-_]|$)/i.test(chromeLocale || '') ? 'zh-cn' : 'en-us';
   }
 
   /**

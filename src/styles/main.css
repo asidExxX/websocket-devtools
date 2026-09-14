@@ -19,6 +19,7 @@
 @import './FavoritesTab.css';
 @import './SystemEventsTab.css';
 @import './LanguageSelector.css';
+@import './AiAssistant.css';
 
 /* Extension Icon Styles */
 .extension-icon-panel:hover {
@@ -114,4 +115,3 @@
 .traffic-pause-resume-btn:active {
   transform: translateY(0);
 }
- 

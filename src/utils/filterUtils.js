@@ -3,12 +3,14 @@
  * @param {Array} messages - Array of message objects
  * @param {Object} filters - Filter configuration
  * @param {string} filters.direction - 'all', 'outgoing', or 'incoming'
- * @param {string} filters.text - Text to filter by
- * @param {boolean} filters.invert - Whether to invert the text filter
+ * @param {string} filters.text - Comma-separated terms or a /pattern/flags regex
+ * @param {boolean} filters.invert - Whether to exclude messages matching any term
  * @returns {Array} Filtered messages
  */
 export const filterMessages = (messages, filters) => {
   const { direction = "all", text = "", invert = false } = filters;
+  const regex = parseRegexFromFilter(text);
+  const terms = regex ? [] : text.split(/[,，、]/).map((term) => term.trim().toLowerCase()).filter(Boolean);
 
   return (
     messages
@@ -19,26 +21,19 @@ export const filterMessages = (messages, filters) => {
         }
 
         // Text content filter
-        if (text.trim()) {
-          // If user provided a regex in the form /pattern/flags, use it.
-          // Otherwise, fall back to case-insensitive substring matching (previous behavior).
-          const regex = parseRegexFromFilter(text);
+        if (regex || terms.length > 0) {
           let matchesText;
 
           if (regex) {
+            // Global and sticky regexes retain state between calls to test().
+            regex.lastIndex = 0;
             matchesText = regex.test(msg.data);
           } else {
             const messageContent = msg.data.toLowerCase();
-            const filterText = text.toLowerCase();
-            matchesText = messageContent.includes(filterText);
+            matchesText = terms.some((term) => messageContent.includes(term));
           }
 
-          // Apply invert logic
-          if (invert) {
-            return !matchesText; // Show messages that DON'T contain the text / match the regex
-          } else {
-            return matchesText; // Show messages that DO contain the text / match the regex
-          }
+          return invert ? !matchesText : matchesText;
         }
 
         return true;

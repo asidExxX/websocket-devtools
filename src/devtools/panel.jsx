@@ -7,11 +7,12 @@ import WebSocketList from "../components/WebSocketList.jsx";
 import MessageDetails from "../components/MessageDetails.jsx";
 import FloatingSimulate from "../components/FloatingSimulate.jsx";
 import LanguageSelector from "../components/LanguageSelector.jsx";
+import AiAssistant from "../components/AiAssistant.jsx";
 import ExtensionIcon from "../Icons/ExtensionIcon.jsx";
 import { t, addLanguageChangeListener, getCurrentLanguage, initForPanel } from "../utils/i18n.js";
 import i18n from "../utils/i18n.js";
 import "../styles/main.css";
-import { Ban, AlertTriangle } from "lucide-react";
+import { Ban, AlertTriangle, Sparkles } from "lucide-react";
 
 // Performance configuration
 const MAX_MESSAGES_PER_CONNECTION = 5000; // Max messages retained per connection
@@ -27,6 +28,8 @@ const WebSocketPanel = () => {
   const [websocketEvents, setWebsocketEvents] = useState([]);
   const [selectedConnectionId, setSelectedConnectionId] = useState(null);
   const [currentTabId, setCurrentTabId] = useState(null);
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [analysisTarget, setAnalysisTarget] = useState(null);
 
   // Circuit breaker state - for showing banner when high traffic stops monitoring
   const [circuitBreakerTriggered, setCircuitBreakerTriggered] = useState(false);
@@ -40,6 +43,7 @@ const WebSocketPanel = () => {
 
   // Ref for FloatingSimulate component
   const floatingSimulateRef = useRef(null);
+  const messageDetailsRef = useRef(null);
 
   // Language state for triggering re-renders when language changes
   const [currentLanguage, setCurrentLanguage] = useState(() => getCurrentLanguage());
@@ -693,6 +697,14 @@ const WebSocketPanel = () => {
             )}
           </div>
           <div className="panel-status">
+            <button
+              type="button"
+              className="ai-open-button"
+              onClick={() => { setAnalysisTarget(null); setIsAiOpen(true); }}
+              title={t("ai.open")}
+            >
+              <Sparkles size={14} /> {t("ai.open")}
+            </button>
             <LanguageSelector />
             <button 
               className="extension-icon-panel"
@@ -741,7 +753,8 @@ const WebSocketPanel = () => {
           </div>
         )}
 
-        <div className="panel-content-fixed">
+        <div className={`panel-workspace${isAiOpen ? " with-ai" : ""}`}>
+          <div className="panel-content-fixed">
           {/* 左侧固定宽度布局：ControlPanel + WebSocketList */}
           <div className="panel-left-section-fixed">
             <div className="control-panel-container-fixed">
@@ -782,15 +795,34 @@ const WebSocketPanel = () => {
             <div className="panel-wrapper">
               <div className="panel-body">
                 <MessageDetails
+                  ref={messageDetailsRef}
                   connection={selectedConnection}
                   selectedConnectionId={selectedConnectionId} // 传递连接ID用于详情面板重新渲染
                   onSimulateMessage={handleSimulateMessage}
                   onClearMessages={handleClearMessages}
                   onOpenSimulatePanel={handleOpenSimulatePanel}
+                  onAnalyzeMessage={(message) => {
+                    setAnalysisTarget({ connectionId: selectedConnectionId, message });
+                    setIsAiOpen(true);
+                  }}
                 />
               </div>
             </div>
           </div>
+          </div>
+
+          {isAiOpen && (
+            <AiAssistant
+              connection={selectedConnection}
+              selectedMessage={analysisTarget?.connectionId === selectedConnectionId ? analysisTarget.message : null}
+              getMessageView={() => messageDetailsRef.current?.getAiMessageView()}
+              getWorkspaceSnapshot={() => ({
+                connections: [...connectionsMap.values()],
+                events: websocketEvents,
+              })}
+              onClose={() => setIsAiOpen(false)}
+            />
+          )}
         </div>
 
         {/* 悬浮模拟消息窗口 */}

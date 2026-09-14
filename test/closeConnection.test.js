@@ -46,6 +46,7 @@ class NonResponsiveWebSocket {
     this.url = url;
     this.readyState = NonResponsiveWebSocket.CONNECTING;
     this.listeners = new Map();
+    this.sent = [];
   }
 
   addEventListener(type, listener) {
@@ -59,7 +60,7 @@ class NonResponsiveWebSocket {
     this.listeners.set(type, listeners.filter((candidate) => candidate !== listener));
   }
 
-  send() {}
+  send(data) { this.sent.push(data); }
 
   close(_code, reason = "") {
     if (Buffer.byteLength(reason, "utf8") > 123) {
@@ -75,7 +76,7 @@ class NonResponsiveWebSocket {
   }
 }
 
-async function createHarness() {
+async function createHarness(initialTrafficRateLimit = 800) {
   const injectedSource = await readFile(
     new URL("../src/content/injected.js", import.meta.url),
     "utf8",
@@ -109,6 +110,7 @@ async function createHarness() {
         }
       },
       Date,
+      document: { currentScript: { dataset: { trafficRateLimit: String(initialTrafficRateLimit) } } },
       JSON,
       Map,
       Math,
@@ -148,6 +150,60 @@ async function createHarness() {
     },
   };
 }
+
+test("uses the configured message rate limit and can disable automatic monitoring stop", async () => {
+  const harness = await createHarness(2);
+  const socket = new harness.fakeWindow.WebSocket("wss://example.com/socket");
+  socket.emit("open");
+  harness.clock.runUntil(100);
+  harness.postedMessages.length = 0;
+
+  harness.sendControlMessage({
+    source: "websocket-proxy-content",
+    type: "set-traffic-rate-limit",
+    rateLimit: -1,
+  });
+  for (let index = 0; index < 3; index++) socket.emit("message", { data: `message-${index}` });
+  harness.clock.runUntil(200);
+
+  assert.equal(harness.fakeWindow.websocketProxyDebug.proxyState.isMonitoring, false);
+  assert.equal(socket.readyState, NonResponsiveWebSocket.OPEN);
+  socket.send("still-connected");
+  assert.deepEqual(socket.sent, ["still-connected"]);
+  assert.equal(harness.postedMessages.filter((message) =>
+    message.payload?.type === "circuit-breaker-triggered").length, 1);
+
+  harness.postedMessages.length = 0;
+  harness.sendControlMessage({
+    source: "websocket-proxy-content",
+    type: "set-traffic-rate-limit",
+    rateLimit: 0,
+  });
+  harness.sendControlMessage({ source: "websocket-proxy-content", type: "start-monitoring" });
+  for (let index = 0; index < 10; index++) socket.emit("message", { data: `later-${index}` });
+  harness.clock.runUntil(300);
+
+  assert.equal(harness.fakeWindow.websocketProxyDebug.proxyState.isMonitoring, true);
+  assert.equal(harness.postedMessages.some((message) =>
+    message.payload?.type === "circuit-breaker-triggered"), false);
+});
+
+test("applies an increased message rate limit without reloading the page", async () => {
+  const harness = await createHarness(2);
+  const socket = new harness.fakeWindow.WebSocket("wss://example.com/socket");
+  socket.emit("open");
+  harness.sendControlMessage({
+    source: "websocket-proxy-content",
+    type: "set-traffic-rate-limit",
+    rateLimit: 4,
+  });
+
+  for (let index = 0; index < 4; index++) socket.emit("message", { data: `message-${index}` });
+  assert.equal(harness.fakeWindow.websocketProxyDebug.proxyState.isMonitoring, true);
+
+  socket.emit("message", { data: "over-limit" });
+  assert.equal(harness.fakeWindow.websocketProxyDebug.proxyState.isMonitoring, false);
+});
 
 test("finishes a client close when the peer never completes the handshake", async () => {
   const harness = await createHarness();

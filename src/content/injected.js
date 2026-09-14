@@ -417,7 +417,13 @@
   // Traffic monitoring configuration - optimized for high-traffic apps like Figma
   // Traffic monitoring - simple circuit breaker
   const TRAFFIC_WINDOW_MS = 1000; // 1 second window
-  const TRAFFIC_PAUSE_THRESHOLD = 800; // Stop monitoring when exceeded
+  const initialTrafficRateLimit = typeof document === "undefined"
+    ? NaN
+    : Number(document.currentScript?.dataset.trafficRateLimit);
+  let trafficRateLimit = Number.isSafeInteger(initialTrafficRateLimit) &&
+    initialTrafficRateLimit >= 0 && initialTrafficRateLimit <= 1000000
+    ? initialTrafficRateLimit
+    : 800; // 0 disables the automatic monitoring stop.
 
   // Connection traffic monitoring
   const connectionTraffic = new Map(); // connectionId -> { count, lastReset }
@@ -440,7 +446,7 @@
     traffic.count++;
 
     // Circuit breaker - when threshold exceeded, stop monitoring
-    if (traffic.count > TRAFFIC_PAUSE_THRESHOLD && proxyState.isMonitoring) {
+    if (trafficRateLimit > 0 && traffic.count > trafficRateLimit && proxyState.isMonitoring) {
       console.warn(`[WebSocket Proxy] Circuit breaker triggered - High traffic (${traffic.count} msg/s). Stopping monitoring.`);
 
       // Stop monitoring
@@ -976,6 +982,9 @@
     // Intercept send method - add control logic
     const originalSend = ws.send.bind(ws);
     ws.send = function (data) {
+      if (!proxyState.isMonitoring) {
+        return originalSend(data);
+      }
 
       // Log send event
       const binaryInfo = processMessageWithBinary(data);
@@ -1228,6 +1237,14 @@
     if (event.data && event.data.source === "websocket-proxy-content") {
 
       switch (event.data.type) {
+        case "set-traffic-rate-limit": {
+          const limit = event.data.rateLimit;
+          if (Number.isSafeInteger(limit) && limit >= 0 && limit <= 1000000) {
+            trafficRateLimit = limit;
+          }
+          break;
+        }
+
         case "start-monitoring":
           proxyState.isMonitoring = true;
           // Send state update

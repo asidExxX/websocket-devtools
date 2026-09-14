@@ -17,6 +17,38 @@ test("filters messages with a regular expression", () => {
   assert.deepEqual(result, [messages[0]]);
 });
 
+test("filters messages matching any comma-separated term", () => {
+  const messages = [
+    { data: "heartbeat", direction: "incoming", timestamp: 1 },
+    { data: "PING", direction: "outgoing", timestamp: 2 },
+    { data: "important data", direction: "incoming", timestamp: 3 },
+  ];
+
+  assert.deepEqual(
+    filterMessages(messages, { text: "heartbeat, PING, ," }),
+    [messages[1], messages[0]],
+  );
+  assert.deepEqual(
+    filterMessages(messages, { text: "heartbeat，PING", invert: true }),
+    [messages[2]],
+  );
+  assert.deepEqual(
+    filterMessages(messages, { text: "heartbeat、PING", direction: "incoming" }),
+    [messages[0]],
+  );
+});
+
+test("keeps a regex containing commas as one message filter", () => {
+  const messages = [
+    { data: "value, one", direction: "incoming", timestamp: 1 },
+    { data: "value, two", direction: "incoming", timestamp: 2 },
+    { data: "other", direction: "incoming", timestamp: 3 },
+  ];
+
+  assert.deepEqual(filterMessages(messages, { text: "/value, /g" }), [messages[1], messages[0]]);
+  assert.deepEqual(filterMessages(messages, { text: "/value, /g", invert: true }), [messages[2]]);
+});
+
 test("evaluates a global regular expression independently for every connection", () => {
   const connections = [
     { id: "first", url: "wss://example.test/socket" },

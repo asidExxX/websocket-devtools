@@ -15,11 +15,22 @@ if (window === window.top) {
   }
 }
 
-// Check if extension is enabled
-function checkExtensionEnabled() {
+const TRAFFIC_RATE_LIMIT_KEY = "websocket-proxy-traffic-rate-limit";
+let currentTrafficRateLimit = 800;
+let trafficRateLimitChanged = false;
+
+function normalizeTrafficRateLimit(value) {
+  return Number.isSafeInteger(value) && value >= 0 && value <= 1000000 ? value : 800;
+}
+
+// Load both settings before injecting so the page starts with the saved limit.
+function getExtensionSettings() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["websocket-proxy-enabled"], (result) => {
-      resolve(result["websocket-proxy-enabled"] !== false); // Default enabled
+    chrome.storage.local.get(["websocket-proxy-enabled", TRAFFIC_RATE_LIMIT_KEY], (result) => {
+      resolve({
+        enabled: result["websocket-proxy-enabled"] !== false,
+        trafficRateLimit: normalizeTrafficRateLimit(result[TRAFFIC_RATE_LIMIT_KEY]),
+      });
     });
   });
 }
@@ -34,13 +45,19 @@ function generateMessageId() {
 }
 
 // Inject using external file to avoid CSP inline script restrictions
-function injectWebSocketProxy() {
+function injectWebSocketProxy(trafficRateLimit) {
 
   try {
     const script = document.createElement("script");
     script.src = chrome.runtime.getURL("src/content/injected.js");
+    script.dataset.trafficRateLimit = String(trafficRateLimit);
     script.onload = function () {
       this.remove(); // Clean up script tag
+      window.postMessage({
+        source: "websocket-proxy-content",
+        type: "set-traffic-rate-limit",
+        rateLimit: currentTrafficRateLimit,
+      }, "*");
     };
     script.onerror = function () {
     };
@@ -52,17 +69,22 @@ function injectWebSocketProxy() {
 }
 
 // Execute injection after checking extension status
-checkExtensionEnabled().then((enabled) => {
+getExtensionSettings().then(({ enabled, trafficRateLimit }) => {
+  if (!trafficRateLimitChanged) currentTrafficRateLimit = trafficRateLimit;
   if (enabled) {
-    if (document.readyState === "loading") {
-      injectWebSocketProxy();
-    } else {
-      injectWebSocketProxy();
-    }
-    
-
-  } else {
+    injectWebSocketProxy(currentTrafficRateLimit);
   }
+});
+
+chrome.storage.onChanged?.addListener((changes, areaName) => {
+  if (areaName !== "local" || !changes[TRAFFIC_RATE_LIMIT_KEY]) return;
+  trafficRateLimitChanged = true;
+  currentTrafficRateLimit = normalizeTrafficRateLimit(changes[TRAFFIC_RATE_LIMIT_KEY].newValue);
+  window.postMessage({
+    source: "websocket-proxy-content",
+    type: "set-traffic-rate-limit",
+    rateLimit: currentTrafficRateLimit,
+  }, "*");
 });
 
 // Listen for messages from injected script
