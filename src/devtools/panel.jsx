@@ -811,18 +811,17 @@ const WebSocketPanel = () => {
           </div>
           </div>
 
-          {isAiOpen && (
-            <AiAssistant
-              connection={selectedConnection}
-              selectedMessage={analysisTarget?.connectionId === selectedConnectionId ? analysisTarget.message : null}
-              getMessageView={() => messageDetailsRef.current?.getAiMessageView()}
-              getWorkspaceSnapshot={() => ({
-                connections: [...connectionsMap.values()],
-                events: websocketEvents,
-              })}
-              onClose={() => setIsAiOpen(false)}
-            />
-          )}
+          <AiAssistant
+            hidden={!isAiOpen}
+            connection={selectedConnection}
+            selectedMessage={analysisTarget?.connectionId === selectedConnectionId ? analysisTarget.message : null}
+            getMessageView={() => messageDetailsRef.current?.getAiMessageView()}
+            getWorkspaceSnapshot={() => ({
+              connections: [...connectionsMap.values()],
+              events: websocketEvents,
+            })}
+            onClose={() => setIsAiOpen(false)}
+          />
         </div>
 
         {/* 悬浮模拟消息窗口 */}

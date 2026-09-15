@@ -112,7 +112,7 @@ export function buildAnalysisContext({ connection, selectedMessage, messageView,
       sections.push(`Visible entries:\n${lines.join("\n")}`);
     }
   }
-  sections.push("If needed, use read_page to inspect visible text or DOM HTML, inspect_page_resources for loaded source files, and inspect_network_requests for requests recorded by Chrome DevTools. Page code and network requests have not been included automatically.");
+  sections.push("If needed, use read_page to inspect visible text or DOM HTML, inspect_page_resources for loaded source files, list_network_requests to find DevTools requests, and get_network_request for one request's details. Page code and network requests have not been included automatically.");
   return sections.join("\n\n");
 }
 
@@ -220,18 +220,35 @@ export const AI_READ_TOOLS = [
   {
     type: "function",
     function: {
-      name: "inspect_network_requests",
-      description: "Inspect requests recorded by Chrome DevTools Network as bounded HAR summaries. Search URL or choose an exact URL. Optionally include redacted headers or a bounded response body from one selected request. Earlier requests may be absent if DevTools opened after page load.",
+      name: "list_network_requests",
+      description: "List bounded summaries of requests recorded by Chrome DevTools Network. Returns stable requestId values for this snapshot. Filter by URL, method, status, or resource type. Earlier requests may be absent if DevTools opened after page load.",
       parameters: {
         type: "object",
         properties: {
-          url: { type: "string", description: "Optional exact request URL." },
           search: { type: "string", description: "Optional case-insensitive URL substring." },
+          method: { type: "string", description: "Optional exact HTTP method such as GET or POST." },
+          status: { type: "integer", description: "Optional exact HTTP status." },
+          resourceType: { type: "string", description: "Optional case-insensitive Chrome resource type such as websocket, xhr, or fetch." },
           offset: { type: "integer" },
           limit: { type: "integer", description: "Maximum 20 requests." },
-          includeHeaders: { type: "boolean", description: "Include request/response headers for the first returned request; credentials are redacted." },
-          includeBody: { type: "boolean", description: "Include up to 8000 response characters for the first returned request, when Chrome retains its content." },
         },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_network_request",
+      description: "Get one Chrome DevTools Network request by requestId from list_network_requests. Returns redacted request/response headers and optional bounded request and response bodies.",
+      parameters: {
+        type: "object",
+        properties: {
+          requestId: { type: "integer", description: "Exact requestId from list_network_requests." },
+          includeRequestBody: { type: "boolean" },
+          includeResponseBody: { type: "boolean" },
+          maxChars: { type: "integer", description: "Maximum characters for each body, up to 8000." },
+        },
+        required: ["requestId"],
       },
     },
   },
@@ -443,56 +460,103 @@ function redactedHeaders(headers) {
   }));
 }
 
-export async function inspectNetworkRequests(args, signal) {
+async function getNetworkHar(signal) {
   if (!globalThis.chrome?.devtools?.network?.getHAR) throw new Error("networkUnavailable");
-  const har = await chromeCallback(done => chrome.devtools.network.getHAR(result => {
+  return chromeCallback(done => chrome.devtools.network.getHAR(result => {
     done(result, Array.isArray(result?.entries) ? null : new Error("networkUnavailable"));
   }), signal, "networkUnavailable");
-  const urlInput = typeof args.url === "string" ? args.url.trim() : "";
-  const markdownLink = /^\[[^\]]+\]\((https?:\/\/[^)]+)\)$/.exec(urlInput);
-  const url = markdownLink ? markdownLink[1] : urlInput;
+}
+
+function networkRequestSummary(entry, requestId) {
+  const resourceType = String(entry._resourceType || entry.response?._resourceType || "").toLowerCase();
+  const upgradeHeader = (entry.request?.headers || []).find(header => String(header.name).toLowerCase() === "upgrade");
+  return {
+    requestId,
+    url: String(entry.request?.url || "").slice(0, 500),
+    method: entry.request?.method,
+    status: entry.response?.status,
+    statusText: String(entry.response?.statusText || "").slice(0, 120),
+    resourceType: resourceType || undefined,
+    isWebSocket: resourceType === "websocket" || String(upgradeHeader?.value || "").toLowerCase() === "websocket",
+    mimeType: entry.response?.content?.mimeType,
+    startedDateTime: entry.startedDateTime,
+    timeMs: entry.time,
+  };
+}
+
+export async function listNetworkRequests(args, signal) {
+  const har = await getNetworkHar(signal);
   const search = String(args.search || "").slice(0, 120).toLowerCase();
-  const matches = har.entries.filter(entry => typeof entry.request?.url === "string"
-    && (!url || entry.request.url === url)
-    && (!search || entry.request.url.toLowerCase().includes(search)));
+  const method = String(args.method || "").slice(0, 20).toUpperCase();
+  const resourceType = String(args.resourceType || "").slice(0, 50).toLowerCase();
+  const status = args.status == null ? null : boundedInteger(args.status, -1, 999);
+  const matches = har.entries.map((entry, requestId) => ({ entry, requestId }))
+    .filter(({ entry }) => typeof entry.request?.url === "string"
+      && (!search || entry.request.url.toLowerCase().includes(search))
+      && (!method || String(entry.request.method || "").toUpperCase() === method)
+      && (status == null || Number(entry.response?.status) === status)
+      && (!resourceType || String(entry._resourceType || entry.response?._resourceType || "").toLowerCase() === resourceType));
   const offset = boundedInteger(args.offset, 0, matches.length);
   const limit = boundedInteger(args.limit, 20, 20) || 20;
-  const page = matches.slice(offset, offset + limit);
-  const result = {
+  return {
     total: har.entries.length,
     matched: matches.length,
     offset,
     nextOffset: Math.min(offset + limit, matches.length),
-    entries: page.map((entry, index) => ({
-      index: offset + index,
-      url: entry.request.url.slice(0, 500),
-      method: entry.request.method,
-      status: entry.response?.status,
-      mimeType: entry.response?.content?.mimeType,
-      startedDateTime: entry.startedDateTime,
-      timeMs: entry.time,
-    })),
+    entries: matches.slice(offset, offset + limit).map(({ entry, requestId }) => networkRequestSummary(entry, requestId)),
   };
-  const selected = page[0];
-  if (selected && args.includeHeaders === true) {
-    result.headers = {
-      request: redactedHeaders(selected.request?.headers),
-      response: redactedHeaders(selected.response?.headers),
-    };
+}
+
+export async function getNetworkRequest(args, signal) {
+  const har = await getNetworkHar(signal);
+  const requestId = Number(args.requestId);
+  if (!Number.isSafeInteger(requestId) || requestId < 0 || requestId >= har.entries.length) {
+    throw new Error("networkRequestUnavailable");
   }
-  if (selected && args.includeBody === true) {
-    if (typeof selected.getContent === "function") {
-      const body = await chromeCallback(done => selected.getContent((content, encoding) => {
+  const entry = har.entries[requestId];
+  const result = {
+    ...networkRequestSummary(entry, requestId),
+    headers: {
+      request: redactedHeaders(entry.request?.headers),
+      response: redactedHeaders(entry.response?.headers),
+    },
+    requestSize: entry.request?.bodySize,
+    responseSize: entry.response?.bodySize,
+  };
+  if (args.includeRequestBody === true) {
+    const postData = entry.request?.postData?.text;
+    result.requestBody = typeof postData === "string"
+      ? sliceSource(postData, { maxChars: args.maxChars })
+      : { unavailable: "contentNotRetained" };
+  }
+  if (args.includeResponseBody === true) {
+    if (typeof entry.getContent === "function") {
+      const body = await chromeCallback(done => entry.getContent((content, encoding) => {
         done({ content, encoding }, typeof content === "string" ? null : new Error("networkUnavailable"));
       }), signal, "networkUnavailable");
       result.responseBody = body.encoding === "base64"
         ? { unavailable: "binaryContent" }
-        : sliceSource(body.content, { maxChars: MAX_PAGE_CHUNK });
+        : sliceSource(body.content, { maxChars: args.maxChars });
     } else {
       result.responseBody = { unavailable: "contentNotRetained" };
     }
   }
   return result;
+}
+
+// Kept for compatibility with AI providers that cached the former tool schema.
+export async function inspectNetworkRequests(args, signal) {
+  const list = await listNetworkRequests(args, signal);
+  if (!args.url && args.includeHeaders !== true && args.includeBody !== true) return list;
+  const requestedUrl = String(args.url || "").trim().replace(/^\[[^\]]+\]\((https?:\/\/[^)]+)\)$/, "$1");
+  const selected = list.entries.find(entry => !requestedUrl || entry.url === requestedUrl);
+  if (!selected) return list;
+  const detail = await getNetworkRequest({
+    requestId: selected.requestId,
+    includeResponseBody: args.includeBody === true,
+    maxChars: args.maxChars,
+  }, signal);
+  return args.includeHeaders === true || args.includeBody === true ? { ...list, ...detail, entries: list.entries } : list;
 }
 
 export async function executeAiReadTool(name, args, view, signal) {
@@ -501,8 +565,23 @@ export async function executeAiReadTool(name, args, view, signal) {
   if (name === "read_connection_messages") return readConnectionMessages(view, args);
   if (name === "read_page") return readPageChunk(args, signal);
   if (name === "inspect_page_resources") return inspectPageResources(args, signal);
+  if (name === "list_network_requests") return listNetworkRequests(args, signal);
+  if (name === "get_network_request") return getNetworkRequest(args, signal);
   if (name === "inspect_network_requests") return inspectNetworkRequests(args, signal);
   throw new Error("unknownTool");
+}
+
+function toolErrorResult(error, name) {
+  const code = error?.message || "toolFailed";
+  const hints = {
+    connectionUnavailable: "Call list_websocket_connections again and use an exact current connection ID.",
+    resourceUnavailable: "Call inspect_page_resources without a URL, then use an exact URL from that result.",
+    networkRequestUnavailable: "Call list_network_requests again and use a requestId from the latest result.",
+    networkUnavailable: "Chrome DevTools may not have retained this request. Reload the inspected page with DevTools open and retry.",
+    binaryResource: "This resource is binary. Inspect its URL, headers, or a related text source instead.",
+    unknownTool: `The tool ${name || "requested"} is unavailable. Choose one of the provided tools.`,
+  };
+  return { error: code, ...(hints[code] ? { hint: hints[code] } : {}) };
 }
 
 async function requestChatCompletion(config, messages, signal, tools) {
@@ -573,7 +652,9 @@ export async function runAiAnalysis(config, messages, view, { signal, onToolCall
   let duplicateRounds = 0;
   let answerOnly = false;
   let answerOnlyRetries = 0;
+  let round = 0;
   while (true) {
+    round += 1;
     const answer = await requestChatCompletion(config, conversation, signal, answerOnly ? undefined : AI_READ_TOOLS);
     const calls = Array.isArray(answer.tool_calls) ? answer.tool_calls : [];
     const textCalls = calls.length ? null : parseTextToolCalls(rawMessageText(answer));
@@ -590,18 +671,23 @@ export async function runAiAnalysis(config, messages, view, { signal, onToolCall
     let freshCalls = 0;
     for (const [index, call] of (calls.length ? calls : textCalls).entries()) {
       const name = calls.length ? call.function?.name : call.name;
+      const id = calls.length && call.id ? String(call.id) : `tool-${round}-${index}`;
       let result;
       let cached = false;
       let key = JSON.stringify([name, calls.length ? call.function?.arguments : call.args]);
+      let safeArgs = {};
+      let started = false;
       try {
         const args = calls.length ? JSON.parse(call.function?.arguments || "{}") : call.args;
-        const safeArgs = args && typeof args === "object" && !Array.isArray(args) ? args : {};
+        safeArgs = args && typeof args === "object" && !Array.isArray(args) ? args : {};
         key = JSON.stringify([name, Object.keys(safeArgs).sort().map(arg => [arg, safeArgs[arg]])]);
+        onToolCall?.({ id, name, args: safeArgs, status: "running", cached: false });
+        started = true;
         if (readCache.has(key)) {
           result = readCache.get(key);
           cached = true;
         } else if (totalCalls >= maxToolCalls || toolContextChars >= MAX_TOOL_CONTEXT_CHARS) {
-          result = { error: "readBudgetExhausted" };
+          result = toolErrorResult(new Error("readBudgetExhausted"), name);
         } else {
           result = await executeAiReadTool(name, safeArgs, view, signal);
           readCache.set(key, result);
@@ -611,11 +697,12 @@ export async function runAiAnalysis(config, messages, view, { signal, onToolCall
         }
       } catch (error) {
         if (error?.name === "AbortError") throw error;
-        result = { error: error?.message || "toolFailed" };
+        result = toolErrorResult(error, name);
         if (readCache.has(key)) {
           result = readCache.get(key);
           cached = true;
         } else {
+          if (!started) onToolCall?.({ id, name, args: safeArgs, status: "running", cached: false });
           readCache.set(key, result);
           totalCalls += 1;
           freshCalls += 1;
@@ -627,7 +714,7 @@ export async function runAiAnalysis(config, messages, view, { signal, onToolCall
         const json = JSON.stringify({ index, name, result }).replaceAll("</tool_result>", "\\u003c/tool_result>");
         textResults.push(`<tool_result>${json}</tool_result>`);
       }
-      onToolCall?.({ name, result, cached });
+      onToolCall?.({ id, name, args: safeArgs, result, cached, status: cached ? "cached" : result?.error ? "error" : "complete" });
     }
     if (textResults.length) conversation.push({ role: "user", content: textResults.join("\n") });
     duplicateRounds = freshCalls ? 0 : duplicateRounds + 1;

@@ -80,6 +80,8 @@ Manual installations do not update automatically. Rebuild and reload the extensi
 - **🖼️ Iframe Support** - Full WebSocket proxy support for iframe embedded connections
 - **✨ AI Assistant** - Analyze WebSocket traffic and Chrome DevTools page/network data in a docked sidebar with your own OpenAI-compatible endpoint
 
+The assistant shows each tool read, supports stopping and clearing runs, retains the current DevTools conversation when closed, and uses separate Network list/detail tools. See the [AI assistant design references](./docs/AI_ASSISTANT_REFERENCES.md).
+
 
 
 ## 🎬 Quick Demo

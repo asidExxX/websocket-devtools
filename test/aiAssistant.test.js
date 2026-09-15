@@ -6,9 +6,11 @@ import {
   buildChatMessages,
   createAiMessageView,
   executeAiReadTool,
+  getNetworkRequest,
   getChatCompletionsUrl,
   inspectNetworkRequests,
   inspectPageResources,
+  listNetworkRequests,
   parseMaxToolCalls,
   parseTextToolCalls,
   readPageChunk,
@@ -134,7 +136,8 @@ test("AI executes DSML tool calls returned as plain text and accepts Markdown re
     );
     assert.equal(answer, "Found both login references.");
     assert.equal(requests.length, 2);
-    assert.equal(log.length, 2);
+    assert.equal(log.filter(item => item.status === "complete").length, 2);
+    assert.equal(log.filter(item => item.status === "running").length, 2);
     assert.equal(requests[1].messages.at(-1).role, "user");
     assert.match(requests[1].messages.at(-1).content, /newLogin/);
     assert.match(requests[1].messages.at(-1).content, /verify-img/);
@@ -242,7 +245,7 @@ test("AI reuses duplicate reads and still returns a final answer", async () => {
     );
     assert.match(answer, /heartbeat/);
     assert.equal(requests.length, 4);
-    assert.deepEqual(log.map(item => item.cached), [false, true, true]);
+    assert.deepEqual(log.filter(item => item.status !== "running").map(item => item.cached), [false, true, true]);
     assert.equal(requests.at(-1).tools, undefined);
   } finally {
     globalThis.fetch = oldFetch;
@@ -339,13 +342,20 @@ test("AI can inspect bounded DevTools network records and redacts credential hea
         { name: "Authorization", value: "Bearer secret" },
         { name: "X-Trace", value: "abc" },
       ] },
-      response: { status: 401, content: { mimeType: "application/json" }, headers: [{ name: "Set-Cookie", value: "sid=secret" }] },
+      _resourceType: "xhr",
+      response: { status: 401, statusText: "Unauthorized", content: { mimeType: "application/json" }, headers: [{ name: "Set-Cookie", value: "sid=secret" }] },
       startedDateTime: "2026-09-14T00:00:00Z",
       time: 12,
       getContent(done) { done('{"error":"unauthorized"}', ""); },
     }] });
   } } } };
   try {
+    const list = await listNetworkRequests({ search: "login", status: 401, resourceType: "xhr" });
+    assert.equal(list.entries[0].requestId, 0);
+    assert.equal(list.entries[0].resourceType, "xhr");
+    const detail = await getNetworkRequest({ requestId: 0, includeResponseBody: true });
+    assert.equal(detail.statusText, "Unauthorized");
+    assert.match(detail.responseBody.content, /unauthorized/);
     const result = await inspectNetworkRequests({ url: "https://example.com/api/login", includeHeaders: true, includeBody: true });
     assert.equal(result.entries[0].status, 401);
     assert.equal(result.headers.request[0].value, "[redacted]");
@@ -353,6 +363,7 @@ test("AI can inspect bounded DevTools network records and redacts credential hea
     assert.equal(result.headers.request[1].value, "abc");
     assert.match(result.responseBody.content, /unauthorized/);
     assert.doesNotMatch(JSON.stringify(result), /Bearer secret|sid=secret/);
+    await assert.rejects(getNetworkRequest({ requestId: 9 }), /networkRequestUnavailable/);
   } finally {
     globalThis.chrome = oldChrome;
   }

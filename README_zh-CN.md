@@ -73,6 +73,8 @@ pnpm exec vite build
 - **🖼️ Iframe支持** - 完整的iframe嵌入式连接WebSocket代理支持
 - **✨ AI 助手** - 在停靠侧栏中，用自定义的 OpenAI 兼容接口分析 WebSocket 流量及 DevTools 页面和网络数据
 
+助手会展示每次工具读取，支持停止和清空；关闭后再次打开仍保留当前 DevTools 会话，并使用分离的网络列表/详情工具。参考项目及采用的设计见 [AI 助手设计参考](./docs/AI_ASSISTANT_REFERENCES.md)。
+
 ## 🎬 快速演示
 
 ### 消息拦截

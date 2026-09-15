@@ -1083,6 +1083,14 @@
     "message": "AI 设置",
     "description": "Translation for ai.settings"
   },
+  "ai_clear": {
+    "message": "清空对话",
+    "description": "Translation for ai.clear"
+  },
+  "ai_stop": {
+    "message": "停止",
+    "description": "Translation for ai.stop"
+  },
   "ai_compatibilityHint": {
     "message": "支持兼容 OpenAI Chat Completions 的接口。请求地址为 Base URL + /chat/completions；按需读取需要模型支持函数调用。",
     "description": "Translation for ai.compatibilityHint"
@@ -1127,6 +1135,22 @@
     "message": "可以询问当前可见的 WebSocket 消息。AI 也能按需读取其他连接、被过滤消息、页面代码和 DevTools 网络请求。",
     "description": "Translation for ai.intro"
   },
+  "ai_quick_disconnect": {
+    "message": "分析异常断开",
+    "description": "Translation for ai.quick.disconnect"
+  },
+  "ai_quick_protocol": {
+    "message": "还原消息协议",
+    "description": "Translation for ai.quick.protocol"
+  },
+  "ai_quick_auth": {
+    "message": "定位登录或鉴权",
+    "description": "Translation for ai.quick.auth"
+  },
+  "ai_quick_heartbeat": {
+    "message": "检查心跳和重连",
+    "description": "Translation for ai.quick.heartbeat"
+  },
   "ai_you": {
     "message": "你",
     "description": "Translation for ai.you"
@@ -1134,6 +1158,14 @@
   "ai_analyzing": {
     "message": "分析中...",
     "description": "Translation for ai.analyzing"
+  },
+  "ai_readingTools": {
+    "message": "正在读取调试数据...",
+    "description": "Translation for ai.readingTools"
+  },
+  "ai_toolTrace": {
+    "message": "工具调用",
+    "description": "Translation for ai.toolTrace"
   },
   "ai_autoContextHint": {
     "message": "自动提供当前可见消息；AI 可按需读取其他连接、被过滤消息、页面与 DevTools 网络记录。",
@@ -1174,6 +1206,42 @@
   "ai_tool_network": {
     "message": "DevTools 网络请求",
     "description": "Translation for ai.tool.network"
+  },
+  "ai_tool_networkList": {
+    "message": "网络请求列表",
+    "description": "Translation for ai.tool.networkList"
+  },
+  "ai_tool_networkDetail": {
+    "message": "网络请求详情",
+    "description": "Translation for ai.tool.networkDetail"
+  },
+  "ai_toolStatus_running": {
+    "message": "读取中",
+    "description": "Translation for ai.toolStatus.running"
+  },
+  "ai_toolStatus_complete": {
+    "message": "已完成",
+    "description": "Translation for ai.toolStatus.complete"
+  },
+  "ai_toolStatus_cached": {
+    "message": "已复用",
+    "description": "Translation for ai.toolStatus.cached"
+  },
+  "ai_toolStatus_stopped": {
+    "message": "已停止",
+    "description": "Translation for ai.toolStatus.stopped"
+  },
+  "ai_toolStatus_failed": {
+    "message": "失败",
+    "description": "Translation for ai.toolStatus.failed"
+  },
+  "ai_toolStatus_entries": {
+    "message": "返回 {{count}} / {{total}} 项",
+    "description": "Translation for ai.toolStatus.entries"
+  },
+  "ai_toolStatus_characters": {
+    "message": "返回 {{count}} 字符",
+    "description": "Translation for ai.toolStatus.characters"
   },
   "ai_selectedMessageIncluded": {
     "message": "还会附带当前选中的消息。",
@@ -1226,6 +1294,30 @@
   "ai_errors_networkUnavailable": {
     "message": "无法读取 DevTools 网络记录。",
     "description": "Translation for ai.errors.networkUnavailable"
+  },
+  "ai_errors_networkRequestUnavailable": {
+    "message": "找不到该网络请求，请重新读取请求列表。",
+    "description": "Translation for ai.errors.networkRequestUnavailable"
+  },
+  "ai_errors_resourceUnavailable": {
+    "message": "找不到该页面资源，请重新读取资源列表。",
+    "description": "Translation for ai.errors.resourceUnavailable"
+  },
+  "ai_errors_binaryResource": {
+    "message": "该资源是二进制内容，无法作为文本读取。",
+    "description": "Translation for ai.errors.binaryResource"
+  },
+  "ai_errors_readBudgetExhausted": {
+    "message": "本轮工具读取已达到设置的上限。",
+    "description": "Translation for ai.errors.readBudgetExhausted"
+  },
+  "ai_errors_unknownTool": {
+    "message": "模型请求了当前不可用的工具。",
+    "description": "Translation for ai.errors.unknownTool"
+  },
+  "ai_errors_toolFailed": {
+    "message": "工具读取失败。",
+    "description": "Translation for ai.errors.toolFailed"
   },
   "ai_errors_connectionUnavailable": {
     "message": "找不到这个 WebSocket 连接。",
